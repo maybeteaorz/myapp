@@ -24,26 +24,12 @@
     return `${String(d.getHours()).padStart(2, '0')}:00`;
   }
 
-  function agenda(date) {
-    const out = [];
-    WB.state.dev.tasks.filter(t => t.status !== 'done' && t.due === date)
-      .forEach(t => out.push({ src: '开发任务', text: t.title, go: 'dev' }));
-    WB.state.media.contents.filter(c => c.publishAt === date && c.status !== 'published')
-      .forEach(c => out.push({ src: '待发布', text: c.title, go: 'media' }));
-    WB.state.consult.sessions.filter(s => s.followUp && !s.followDone && s.nextAt === date)
-      .forEach(s => out.push({ src: '客户跟进', text: s.clientName || s.topic || '', go: 'consult' }));
-    WB.state.games.items.filter(i => i.status === 'playing').forEach(i => {
-      if (date === today()) out.push({ src: '在玩', text: i.title, go: 'games' });
-    });
-    return out;
-  }
-
   function render(root) {
     const items = sorted(planDate);
     const done = items.filter(x => x.done).length;
     const pct = items.length ? Math.round(done / items.length * 100) : 0;
     const isToday = planDate === today();
-    const ag = agenda(planDate);
+    const ag = WB.calc.agenda(planDate);
 
     root.innerHTML = `<div class="wrap">
       <div class="page-head">

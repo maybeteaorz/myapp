@@ -19,10 +19,10 @@
     const off = c * (1 - Math.max(0, Math.min(1, pct)));
     return `<svg viewBox="0 0 48 48" width="48" height="48">
       <circle cx="24" cy="24" r="${r}" fill="none" stroke="#e8e5dd" stroke-width="4.5"/>
-      <circle cx="24" cy="24" r="${r}" fill="none" stroke="#2f6a63" stroke-width="4.5"
+      <circle id="ringArc" cx="24" cy="24" r="${r}" fill="none" stroke="#2f6a63" stroke-width="4.5"
         stroke-dasharray="${c.toFixed(1)}" stroke-dashoffset="${off.toFixed(1)}"
         stroke-linecap="round" transform="rotate(-90 24 24)"/>
-      <text x="24" y="28" text-anchor="middle" font-size="12" font-weight="650" fill="#22252a">${label}</text>
+      <text id="ringLabel" x="24" y="28" text-anchor="middle" font-size="12" font-weight="650" fill="#22252a">${label}</text>
     </svg>`;
   }
 
@@ -96,6 +96,7 @@
             <a class="btn ghost sm" href="#/plan">打开今日计划 →</a>
           </div>
           <div id="homePlan">${planHtml(plan)}</div>
+          ${agendaHtml(calc.agenda(t))}
         </div>
 
         <div class="card">
@@ -154,8 +155,19 @@
     return `<div class="timeline">${rows}</div>`;
   }
 
-  function memoHtml() {
-    const list = WB.state.memo.slice()
+  /* 其他模块今天到期 / 待跟进 / 在玩的事，只读展示，点击去对应模块处理 */
+  function agendaHtml(ag) {
+    if (!ag.length) return '';
+    return `<div class="agenda-block">
+      <div class="agenda-title"><span>其他模块今天关联的事</span><span class="tip">只读，点击去处理</span></div>
+      <div class="agenda-strip">${ag.map(a => `
+        <div class="agenda-chip" data-go="${a.go}">
+          <span class="src">${esc(a.src)}</span><span>${esc(a.text)}</span>
+        </div>`).join('')}</div>
+    </div>`;
+  }
+
+  function memoHtml() {    const list = WB.state.memo.slice()
       .sort((a, b) => (a.done ? 1 : 0) - (b.done ? 1 : 0))
       .slice(0, 8);
     if (!list.length) return `<div class="empty" style="padding:22px 16px">还没有备忘，随手记一条试试</div>`;
@@ -185,6 +197,19 @@
     }));
   }
 
+  /* 勾选后同步三处：列表、完成度圆环、条幅文案，避免要刷新才一致 */
+  function paintHomePlan(root, arr) {
+    const done = arr.filter(x => x.done).length;
+    const total = arr.length;
+    const c = 2 * Math.PI * 20;
+    const arc = WB.qs('#ringArc', root);
+    if (arc) arc.setAttribute('stroke-dashoffset', (c * (1 - (total ? done / total : 0))).toFixed(1));
+    const label = WB.qs('#ringLabel', root);
+    if (label) label.textContent = `${done}/${total}`;
+    const meta = WB.qs('.today-banner .meta', root);
+    if (meta) meta.textContent = `${fmtDateFull(today())}　·　${total ? `今天安排了 ${total} 件事` : '今天还没有安排'}`;
+  }
+
   function bindPlan(root) {
     WB.qsa('#homePlan [data-toggle]', root).forEach(el => el.addEventListener('click', () => {
       const arr = WB.state.plan[today()] || [];
@@ -193,6 +218,7 @@
       item.done = !item.done;
       WB.save();
       WB.qs('#homePlan', root).innerHTML = planHtml(arr.slice().sort((a, b) => (a.start || '99') < (b.start || '99') ? -1 : 1));
+      paintHomePlan(root, arr);
       bindPlan(root);
     }));
   }

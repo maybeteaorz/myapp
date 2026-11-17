@@ -340,16 +340,19 @@ window.WB = (function () {
         playing: state.games.items.filter(i => i.status === 'playing').length
       };
     },
-    todayAgenda() {
-      const d = today();
+    /** 某天"其他模块汇入"的只读事项（PRD 6.2）。首页与今日计划共用这一处口径。 */
+    agenda(date) {
       const out = [];
-      (state.plan[d] || []).forEach(p => out.push({ src: '计划', text: p.text, time: p.start, done: p.done }));
-      state.dev.tasks.filter(t => t.status !== 'done' && t.due === d)
-        .forEach(t => out.push({ src: '开发', text: t.title, done: false }));
-      state.media.contents.filter(c => c.publishAt === d && c.status !== 'published')
-        .forEach(c => out.push({ src: '自媒体', text: c.title, done: false }));
-      state.consult.sessions.filter(s => s.followUp && !s.followDone && s.nextAt === d)
-        .forEach(s => out.push({ src: '咨询', text: '跟进：' + (s.clientName || s.topic || ''), done: false }));
+      state.dev.tasks.filter(t => t.status !== 'done' && t.due === date)
+        .forEach(t => out.push({ src: '开发任务', text: t.title, go: 'dev' }));
+      state.media.contents.filter(c => c.status !== 'published' && c.publishAt === date)
+        .forEach(c => out.push({ src: '待发布', text: c.title, go: 'media' }));
+      state.consult.sessions.filter(s => s.followUp && !s.followDone && s.nextAt === date)
+        .forEach(s => out.push({ src: '客户跟进', text: s.clientName || s.topic || '', go: 'consult' }));
+      if (date === today()) {
+        state.games.items.filter(i => i.status === 'playing')
+          .forEach(i => out.push({ src: '在玩', text: i.title, go: 'games' }));
+      }
       return out;
     }
   };
