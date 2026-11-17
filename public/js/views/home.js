@@ -181,6 +181,11 @@
 
   function bindMemo(root) {
     const list = WB.qs('#memoList', root);
+    const paintHint = () => {
+      const add = WB.qs('#memoAdd', root);
+      const hint = add && add.closest('.card').querySelector('.hint');
+      if (hint) hint.textContent = `${WB.state.memo.filter(x => !x.done).length} 条未处理`;
+    };
     WB.qsa('[data-toggle]', list).forEach(el => el.addEventListener('click', () => {
       const item = WB.state.memo.find(x => x.id === el.dataset.toggle);
       if (!item) return;
@@ -188,12 +193,14 @@
       WB.save();
       list.innerHTML = memoHtml();
       bindMemo(root);
+      paintHint();
     }));
     WB.qsa('[data-del]', list).forEach(el => el.addEventListener('click', () => {
       WB.state.memo = WB.state.memo.filter(x => x.id !== el.dataset.del);
       WB.save();
       list.innerHTML = memoHtml();
       bindMemo(root);
+      paintHint();
     }));
   }
 

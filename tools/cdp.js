@@ -94,6 +94,15 @@ class Page {
     );
   }
 
+  async reload() {
+    await this.send('Page.reload', { ignoreCache: true });
+    await sleep(150);
+    await this.waitFor(
+      'document.readyState === "complete" && !!document.querySelector("#app .wrap") && !!window.WB && !!window.WB.state',
+      10000
+    );
+  }
+
   async waitFor(expr, timeout = 5000) {
     const t0 = Date.now();
     while (Date.now() - t0 < timeout) {

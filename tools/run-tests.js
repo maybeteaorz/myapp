@@ -8,7 +8,8 @@ const F = require('./fixtures');
 const suiteName = process.argv[2] || 'all';
 const SUITES = {
   phase1: () => require('./tests/phase1'),
-  acceptance: () => require('./tests/acceptance')
+  acceptance: () => require('./tests/acceptance'),
+  acceptance2: () => require('./tests/acceptance2')
 };
 
 const list = [];
@@ -38,8 +39,11 @@ async function main() {
 
   for (const item of list) {
     try {
-      await F.blankWrite();
+      // 顺序很关键：先导航（让上一页挂起的防抖保存经 sendBeacon 落盘），
+      // 再重置为空白数据，最后重载页面 —— 保证每个用例从干净的空数据开始。
       await page.goto(F.BASE + '/#/home');
+      await F.blankWrite();
+      await page.reload();
       await item.fn(t);
       pass++;
       console.log(`  ✓ ${item.name}`);

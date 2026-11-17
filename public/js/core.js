@@ -127,6 +127,15 @@ window.WB = (function () {
     saveTimer = setTimeout(doSave, 350);
   }
 
+  /* 刷新/关闭页面时，还没落盘的改动用 sendBeacon 立即送出，避免 350ms 防抖窗口内丢数据 */
+  window.addEventListener('pagehide', () => {
+    if (saveTimer && state) {
+      clearTimeout(saveTimer);
+      saveTimer = null;
+      try { navigator.sendBeacon('/api/data', JSON.stringify(state)); } catch (e) { /* 尽力而为 */ }
+    }
+  });
+
   async function load() {
     const r = await fetch('/api/data');
     const j = await r.json();
