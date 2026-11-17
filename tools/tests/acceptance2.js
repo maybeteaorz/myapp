@@ -319,7 +319,9 @@ exports.run = async t => {
     await modalOk(page);
     await page.waitFor('document.body.innerText.includes("记录两次以上才能画出趋势")');
     await page.click('#addWeight');
+    await page.waitFor('!!document.querySelector("#wWeight")');
     await val(page, '#wWeight', '70.0');
+    await val(page, '#wDate', F.addDays(F.today(), -1)); // 不同日期，避免同日覆盖
     await modalOk(page);
     await page.waitFor('!!document.querySelector("svg.spark path")');
     const pts = await page.eval('return WB.state.fitness.body.length;');
@@ -416,7 +418,7 @@ exports.run = async t => {
     await modalOk(page);
     await page.waitFor('document.querySelector(".card-pad span.num").textContent === "232"');
     await page.click('[data-nav="-1"]');
-    await page.waitFor('document.body.innerText.includes("还没有记午餐")');
+    await page.waitFor('document.body.innerText.includes("还没记午餐")');
     await page.click('[data-add="lunch"]');
     await page.waitFor('!!document.querySelector("#aQty")');
     await modalOk(page);
@@ -571,7 +573,11 @@ exports.run = async t => {
     await page.goto(F.BASE + '/#/media');
     await page.click('#newContent');
     await page.waitFor('!!document.querySelector("#mTitle")');
-    await modalOk(page);
+    // 不用 modalOk：这里被测行为就是"弹窗保持打开"
+    await page.eval(`
+      const masks = [...document.querySelectorAll('.modal-mask')];
+      masks[masks.length - 1].querySelector('[data-ok]').click();
+      return true;`);
     await waitToast(page, '标题不能为空');
     const still = await page.count('.modal-mask');
     if (still !== 1) throw new Error('弹窗应保持打开，实际 ' + still + ' 个');

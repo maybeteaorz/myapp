@@ -228,7 +228,7 @@
         </div>
         ${isNew ? '' : `<button class="btn danger" id="delProj" style="align-self:flex-start">删除这个项目</button>`}`,
       okText: isNew ? '创建' : '保存',
-      onMount: (body) => {
+      onMount: (body, close) => {
         let color = x.color || COLORS[0];
         WB.qsa('[data-color]', body).forEach(el => el.addEventListener('click', () => {
           color = el.dataset.color;
@@ -244,7 +244,7 @@
           WB.state.dev.tasks = WB.state.dev.tasks.filter(y => y.projectId !== x.id);
           WB.state.dev.bugs = WB.state.dev.bugs.filter(y => y.projectId !== x.id);
           WB.state.dev.snippets = WB.state.dev.snippets.filter(y => y.projectId !== x.id);
-          pid = null; WB.save(); WB.refresh();
+          pid = null; WB.save(); WB.refresh(); close();
           WB.toast('项目已删除');
         });
       },
