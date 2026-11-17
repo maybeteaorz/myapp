@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>我的工作生活台</title>
+<link rel="stylesheet" href="/css/style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%232f6a63'/><text x='16' y='23' font-size='18' text-anchor='middle' fill='%23fff' font-family='sans-serif'>我</text></svg>">
+</head>
+<body>
+<div class="shell">
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-mark">我</div>
+      <div class="brand-text">
+        <strong>工作生活台</strong>
+        <span id="brandDate">—</span>
+      </div>
+    </div>
+    <nav id="nav" class="nav"></nav>
+    <div class="side-foot">
+      <div id="saveState" class="save-state"><i></i><span>已就绪</span></div>
+      <div class="side-hint">数据保存在本机 data 文件夹</div>
+    </div>
+  </aside>
+  <main id="app" class="app"></main>
+</div>
+
+<div id="modalRoot"></div>
+<div id="toastRoot" class="toast-root"></div>
+
+<script src="/js/core.js"></script>
+<script src="/js/views/home.js"></script>
+<script src="/js/views/plan.js"></script>
+<script src="/js/views/media.js"></script>
+<script src="/js/views/dev.js"></script>
+<script src="/js/views/consult.js"></script>
+<script src="/js/views/fitness.js"></script>
+<script src="/js/views/diet.js"></script>
+<script src="/js/views/games.js"></script>
+<script src="/js/views/settings.js"></script>
+</body>
+</html>
