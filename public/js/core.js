@@ -127,6 +127,13 @@ window.WB = (function () {
     saveTimer = setTimeout(doSave, 350);
   }
 
+  /** 手动保存：底部按钮点击 / Ctrl+S。有未落盘改动立即写，没有也补写一次确保落盘。 */
+  function manualSave() {
+    if (!state) return;
+    toast('正在保存…');
+    save(true);
+  }
+
   /* 刷新/关闭页面时，还没落盘的改动用 sendBeacon 立即送出，避免 350ms 防抖窗口内丢数据 */
   window.addEventListener('pagehide', () => {
     if (saveTimer && state) {
@@ -263,6 +270,25 @@ window.WB = (function () {
 
   function refresh() { renderNav(); VIEWS[current].render(qs('#app')); }
 
+  /* ---------- 日历工具 ---------- */
+  /**
+   * 返回覆盖某月的 6×7 日期矩阵（周一开头）。
+   * y: 年份，m: 1-12。返回 42 个 ymd 字符串（按周分组），首尾可能是相邻月份的日期。
+   */
+  function monthMatrix(y, m) {
+    const first = new Date(y, m - 1, 1);
+    const start = new Date(first);
+    start.setDate(1 - ((first.getDay() + 6) % 7));
+    const weeks = [];
+    const d = new Date(start);
+    for (let w = 0; w < 6; w++) {
+      const row = [];
+      for (let i = 0; i < 7; i++) { row.push(ymd(d)); d.setDate(d.getDate() + 1); }
+      weeks.push(row);
+    }
+    return weeks;
+  }
+
   /* ---------- 通用小片段 ---------- */
   function emptyBox(title, sub) {
     return `<div class="empty"><b>${esc(title)}</b>${esc(sub || '')}</div>`;
@@ -375,6 +401,7 @@ window.WB = (function () {
     save, load, refresh, go, route, renderNav,
     blank, uid, today, ymd, addDays, fmtDate, fmtDateFull, relDay, parseYmd, startOfWeek, WEEK,
     esc, icon, qs, qsa, toast, modal, confirm, emptyBox, statusTag, minutesToText,
+    monthMatrix, manualSave,
     notify: refresh,
     setCurrent: n => { current = n; }
   };
@@ -396,7 +423,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (!location.hash) location.hash = '#/home';
   else WB.route();
 
-  // Alt + 1..9 快速切换
+  // Alt + 1..9 快速切换；Ctrl / Cmd + S 手动保存
   document.addEventListener('keydown', e => {
     if (!e.altKey || e.ctrlKey || e.metaKey) return;
     const n = Number(e.key);
@@ -405,5 +432,12 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (target) { e.preventDefault(); WB.go(target.key); }
     }
   });
+  document.addEventListener('keydown', e => {
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
+      e.preventDefault();
+      WB.manualSave();
+    }
+  });
+  document.querySelector('#saveState').addEventListener('click', () => WB.manualSave());
 });
 

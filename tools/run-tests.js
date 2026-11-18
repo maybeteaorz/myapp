@@ -9,7 +9,8 @@ const suiteName = process.argv[2] || 'all';
 const SUITES = {
   phase1: () => require('./tests/phase1'),
   acceptance: () => require('./tests/acceptance'),
-  acceptance2: () => require('./tests/acceptance2')
+  acceptance2: () => require('./tests/acceptance2'),
+  v11: () => require('./tests/v11')
 };
 
 const list = [];

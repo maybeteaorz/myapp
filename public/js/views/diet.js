@@ -8,6 +8,69 @@
     { key: 'snack', label: '加餐 / 零食', hint: '' }
   ];
   let date = today();
+  const NOW = new Date();
+  let calY = NOW.getFullYear(), calM = NOW.getMonth() + 1;
+
+  /* ---------- 饮食日历 ---------- */
+  function dietCalHtml() {
+    const logs = WB.state.diet.logs || {};
+    const t = today();
+    const goal = WB.state.settings.kcalGoal || 2000;
+    const prefix = `${calY}-${String(calM).padStart(2, '0')}`;
+    const weeks = WB.monthMatrix(calY, calM).filter(row => row.some(ds => ds.startsWith(prefix)));
+    const dows = ['一', '二', '三', '四', '五', '六', '日'].map(d => `<div class="dow">${d}</div>`).join('');
+    const cells = weeks.flat().map(ds => {
+      const dayN = Number(ds.slice(8));
+      if (!ds.startsWith(prefix)) return `<div class="cal-cell out"><div class="d">${dayN}</div></div>`;
+      const day = calc.dietDay(ds);
+      const has = day.items.length > 0;
+      const over = day.kcal > goal;
+      const pct = Math.min(100, Math.round(day.kcal / goal * 100));
+      const cls = ['cal-cell', has ? (over ? 'over' : 'ok') : '', ds === t ? 'today' : ''].filter(Boolean).join(' ');
+      return `<div class="${cls}" data-calday="${ds}" title="${esc(ds)}">
+        <div class="d">${dayN}</div>
+        ${has ? `<div class="cal-name num">${Math.round(day.kcal)} kcal</div>
+          <div class="cal-sub">${day.items.length} 项 · 水 ${day.water} 杯</div>
+          <div class="cal-bar"><i style="width:${pct}%"></i></div>`
+        : ''}
+      </div>`;
+    }).join('');
+    return `<div class="cal">${dows}${cells}</div>
+      <div class="cal-legend">
+        <span><i class="sw" style="background:var(--accent-soft);border:1px solid var(--line-2)"></i>在目标内</span>
+        <span><i class="sw" style="background:var(--danger-soft);border:1px solid #ecd2cd"></i>超过 ${goal} kcal</span>
+        <span>点日期看当天四餐明细</span>
+      </div>`;
+  }
+
+  function showDietDay(ds) {
+    const day = calc.dietDay(ds);
+    if (!day.items.length) return;
+    const log = (WB.state.diet.logs || {})[ds] || {};
+    const goal = WB.state.settings.kcalGoal || 2000;
+    const mealRows = MEALS.map(m => {
+      const items = log[m.key] || [];
+      if (!items.length) return '';
+      return `<div style="margin-bottom:6px">
+        <div style="font-size:12px;font-weight:650;margin-bottom:3px">${m.label}</div>
+        ${items.map(x => `<div class="line-item" style="padding:6px 0;border-color:#f4f2ec">
+          <span class="grow">${esc(x.name)}${x.qty ? ` × ${x.qty}${x.unit || ''}` : ''}</span>
+          <span class="num small muted">${Math.round(Number(x.kcal) || 0)} kcal · 蛋白 ${Math.round(Number(x.protein) || 0)}g</span>
+        </div>`).join('')}
+      </div>`;
+    }).join('');
+    WB.modal({
+      title: `饮食明细 · ${WB.fmtDateFull(ds)}`,
+      wide: true,
+      body: `
+        <div style="display:flex;gap:10px;align-items:center">
+          <span class="tag ${day.kcal > goal ? 'danger' : 'accent'}">${Math.round(day.kcal)} / ${goal} kcal</span>
+          <span class="small muted">蛋白 ${Math.round(day.protein)}g · 碳水 ${Math.round(day.carb)}g · 脂肪 ${Math.round(day.fat)}g · 水 ${day.water} 杯</span>
+        </div>
+        ${mealRows || '<div class="empty">当天没有记录</div>'}`,
+      footer: null
+    });
+  }
 
   function logOf(d, create) {
     if (!WB.state.diet.logs[d] && create) {
@@ -38,6 +101,19 @@
           </div>
           <button class="btn" id="backToday" ${date === today() ? 'disabled' : ''}>今天</button>
         </div>
+      </div>
+
+      <div class="card" style="margin-bottom:14px">
+        <div class="cal-head-row">
+          <h3 style="font-size:13.5px">饮食日历</h3>
+          <div class="date-nav">
+            <button class="btn icon sm" data-calnav="-1" title="上个月">${icon('left', 14)}</button>
+            <span class="cur">${calY} 年 ${calM} 月</span>
+            <button class="btn icon sm" data-calnav="1" title="下个月">${icon('right', 14)}</button>
+            <button class="btn sm" data-caltoday>本月</button>
+          </div>
+        </div>
+        ${dietCalHtml()}
       </div>
 
       <div class="card" style="margin-bottom:14px">
@@ -126,6 +202,20 @@
       date = addDays(date, Number(b.dataset.nav)); WB.refresh();
     }));
     WB.qs('#backToday', wrap).addEventListener('click', () => { date = today(); WB.refresh(); });
+
+    WB.qsa('[data-calnav]', wrap).forEach(el => el.addEventListener('click', () => {
+      calM += Number(el.dataset.calnav);
+      if (calM < 1) { calM = 12; calY--; }
+      if (calM > 12) { calM = 1; calY++; }
+      WB.refresh();
+    }));
+    const calTodayBtn = WB.qs('[data-caltoday]', wrap);
+    if (calTodayBtn) calTodayBtn.addEventListener('click', () => {
+      const n = new Date(); calY = n.getFullYear(); calM = n.getMonth() + 1; WB.refresh();
+    });
+    WB.qsa('[data-calday]', wrap).forEach(el => el.addEventListener('click', () => {
+      showDietDay(el.dataset.calday);
+    }));
 
     WB.qsa('[data-water]', wrap).forEach(el => el.addEventListener('click', () => {
       const n = Number(el.dataset.water);

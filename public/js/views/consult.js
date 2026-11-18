@@ -70,6 +70,7 @@
                 </div>
               </div>
               <div style="display:flex;gap:8px">
+                <button class="btn ghost icon sm" id="delClientQuick" title="删除这个客户" style="color:var(--danger)">${icon('trash', 13)}</button>
                 <button class="btn sm" id="editClient">编辑</button>
                 <button class="btn primary sm" id="addSession">${icon('plus', 13)} 记录一次沟通</button>
               </div>
@@ -125,6 +126,7 @@
     WB.qs('#newClient', wrap).addEventListener('click', () => editClient(null));
     WB.qs('#editClient', wrap).addEventListener('click', () => editClient(c));
     WB.qs('#addSession', wrap).addEventListener('click', () => editSession(null, c));
+    WB.qs('#delClientQuick', wrap).addEventListener('click', () => deleteClient(c));
 
     WB.qsa('[data-client]', wrap).forEach(el => el.addEventListener('click', () => {
       cid = el.dataset.client; WB.refresh();
@@ -151,6 +153,20 @@
     });
   }
 
+  async function deleteClient(c) {
+    const ok = await WB.confirm({
+      title: '删除客户',
+      html: `确定删除「<b>${esc(c.name)}</b>」吗？<br><span style="font-size:12px;color:var(--ink-3)">该客户的 ${WB.state.consult.sessions.filter(s => s.clientId === c.id).length} 条沟通记录会一起删除，删除后无法恢复。</span>`,
+      danger: true, okText: '删除'
+    });
+    if (!ok) return false;
+    WB.state.consult.clients = WB.state.consult.clients.filter(y => y.id !== c.id);
+    WB.state.consult.sessions = WB.state.consult.sessions.filter(s => s.clientId !== c.id);
+    cid = null; WB.save(); WB.refresh();
+    WB.toast('客户已删除');
+    return true;
+  }
+
   function editClient(c) {
     const isNew = !c;
     const x = c || { id: WB.uid(), name: '', company: '', contact: '', note: '', rate: '', rateUnit: '/次', status: 'active' };
@@ -174,11 +190,7 @@
       onMount: (body, close) => {
         const del = WB.qs('#delClient', body);
         if (del) del.addEventListener('click', async () => {
-          const ok = await WB.confirm({ title: '删除客户', text: `「${x.name}」的沟通记录会一起删除，确定吗？`, danger: true, okText: '删除' });
-          if (!ok) return;
-          WB.state.consult.clients = WB.state.consult.clients.filter(y => y.id !== x.id);
-          WB.state.consult.sessions = WB.state.consult.sessions.filter(s => s.clientId !== x.id);
-          cid = null; WB.save(); WB.refresh(); close();
+          if (await deleteClient(x)) close();
         });
       },
       onOk: body => {

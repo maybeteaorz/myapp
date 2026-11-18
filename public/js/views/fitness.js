@@ -3,12 +3,66 @@
   const { esc, icon, today, addDays, calc } = WB;
   const PARTS = ['胸', '背', '腿', '肩', '手臂', '核心', '有氧', '全身'];
   let logDate = today();
+  const NOW = new Date();
+  let calY = NOW.getFullYear(), calM = NOW.getMonth() + 1;
 
   function streak() {
     const dates = new Set(WB.state.fitness.logs.map(l => l.date));
     let n = 0, d = dates.has(today()) ? today() : addDays(today(), -1);
     while (dates.has(d)) { n++; d = addDays(d, -1); }
     return n;
+  }
+
+  /* ---------- 训练日历 ---------- */
+  function fitCalHtml() {
+    const byDate = {};
+    WB.state.fitness.logs.forEach(l => { byDate[l.date] = l; });
+    const t = today();
+    const prefix = `${calY}-${String(calM).padStart(2, '0')}`;
+    const weeks = WB.monthMatrix(calY, calM).filter(row => row.some(ds => ds.startsWith(prefix)));
+    const dows = ['一', '二', '三', '四', '五', '六', '日'].map(d => `<div class="dow">${d}</div>`).join('');
+    const cells = weeks.flat().map(ds => {
+      const dayN = Number(ds.slice(8));
+      if (!ds.startsWith(prefix)) return `<div class="cal-cell out"><div class="d">${dayN}</div></div>`;
+      const log = byDate[ds];
+      const cls = ['cal-cell', log ? 'fit' : '', ds === t ? 'today' : ''].filter(Boolean).join(' ');
+      return `<div class="${cls}" data-calday="${ds}" title="${esc(ds)}">
+        <div class="d">${dayN}</div>
+        ${log ? `<div class="cal-name">${esc(log.name || '训练')}</div>
+          <div class="cal-sub">${(log.items || []).length} 个动作${log.duration ? ' · ' + log.duration + ' 分' : ''}</div>`
+        : ''}
+      </div>`;
+    }).join('');
+    return `<div class="cal">${dows}${cells}</div>
+      <div class="cal-legend">
+        <span><i class="sw" style="background:var(--accent-soft);border:1px solid var(--line-2)"></i>有训练</span>
+        <span>点日期看当天练了哪个部位、什么动作、几组几次</span>
+      </div>`;
+  }
+
+  function showFitDay(ds) {
+    const log = WB.state.fitness.logs.find(l => l.date === ds);
+    if (!log) return;
+    WB.modal({
+      title: `训练详情 · ${WB.fmtDateFull(ds)}`,
+      wide: true,
+      body: `
+        <div style="display:flex;gap:8px;align-items:center">
+          <span class="tag accent">${esc(log.name || '训练')}</span>
+          <span class="small muted">${log.duration || 0} 分钟 · ${(log.items || []).length} 个动作</span>
+        </div>
+        ${(log.items || []).length ? `<table class="table">
+          <thead><tr><th>动作</th><th style="width:130px">组数 × 次数</th><th style="width:90px">重量</th><th style="width:60px">完成</th></tr></thead>
+          <tbody>${log.items.map(i => `<tr>
+            <td style="font-weight:600">${esc(i.exercise)}</td>
+            <td class="num">${i.sets || '?'} 组 × ${i.reps || '?'}</td>
+            <td class="num muted">${i.weight ? esc(i.weight) + ' kg' : '—'}</td>
+            <td><span class="tag ${i.done ? 'accent' : 'line'}">${i.done ? '✓' : '未做'}</span></td>
+          </tr>`).join('')}</tbody></table>
+        <div class="cal-legend" style="padding:0">部位：${esc(log.part || log.name || '—')}</div>`
+        : '<div class="empty">这条记录没有动作明细</div>'}`,
+      footer: null
+    });
   }
 
   function render(root) {
@@ -35,6 +89,19 @@
           <div class="stat"><div class="v num">${wk.minutes}<span style="font-size:11px;color:var(--ink-3);font-weight:400"> 分钟</span></div><div class="k">本周训练时长</div></div>
           <div class="stat"><div class="v num">${body ? body.weight : '—'}<span style="font-size:11px;color:var(--ink-3);font-weight:400">${body ? ' kg' : ''}</span></div><div class="k">最近体重${body ? ' · ' + esc(body.date.slice(5)) : ''}</div></div>
         </div>
+      </div>
+
+      <div class="card" style="margin-bottom:14px">
+        <div class="cal-head-row">
+          <h3 style="font-size:13.5px">训练日历</h3>
+          <div class="date-nav">
+            <button class="btn icon sm" data-calnav="-1" title="上个月">${icon('left', 14)}</button>
+            <span class="cur">${calY} 年 ${calM} 月</span>
+            <button class="btn icon sm" data-calnav="1" title="下个月">${icon('right', 14)}</button>
+            <button class="btn sm" data-caltoday>本月</button>
+          </div>
+        </div>
+        ${fitCalHtml()}
       </div>
 
       <div class="grid" style="grid-template-columns:1.45fr 1fr;align-items:start">
@@ -201,6 +268,19 @@
     WB.qs('#addWeight', wrap).addEventListener('click', addWeight);
 
     WB.qsa('[data-start]', wrap).forEach(el => el.addEventListener('click', () => startFromTemplate(el.dataset.start)));
+    WB.qsa('[data-calnav]', wrap).forEach(el => el.addEventListener('click', () => {
+      calM += Number(el.dataset.calnav);
+      if (calM < 1) { calM = 12; calY--; }
+      if (calM > 12) { calM = 1; calY++; }
+      WB.refresh();
+    }));
+    const calTodayBtn = WB.qs('[data-caltoday]', wrap);
+    if (calTodayBtn) calTodayBtn.addEventListener('click', () => {
+      const n = new Date(); calY = n.getFullYear(); calM = n.getMonth() + 1; WB.refresh();
+    });
+    WB.qsa('[data-calday]', wrap).forEach(el => el.addEventListener('click', () => {
+      showFitDay(el.dataset.calday);
+    }));
     WB.qsa('[data-edittpl]', wrap).forEach(el => el.addEventListener('click', () => {
       editTemplate(WB.state.fitness.templates.find(x => x.id === el.dataset.edittpl));
     }));

@@ -44,7 +44,9 @@ class Page {
         this.pending.delete(msg.id);
         msg.error ? reject(new Error(msg.error.message)) : resolve(msg.result);
       } else if (msg.method === 'Runtime.exceptionThrown') {
-        this.consoleErrors.push(msg.params.exceptionDetails.text || 'exception');
+        const d = msg.params.exceptionDetails;
+        const desc = d.exception && (d.exception.description || d.exception.value);
+        this.consoleErrors.push(((d.text || 'exception') + (desc && desc !== d.text ? ' :: ' + String(desc).split('\n').slice(0, 3).join(' | ') : '')).trim());
       } else if (msg.method === 'Runtime.consoleAPICalled' && msg.params.type === 'error') {
         this.consoleErrors.push(msg.params.args.map(a => a.value ?? a.description ?? '').join(' '));
       }

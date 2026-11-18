@@ -74,11 +74,14 @@
                 <button class="btn sm" id="editProj">编辑</button>
               </div>
             </div>
-            <div style="display:flex;gap:4px;padding:0 14px;border-bottom:1px solid var(--line)">
+            <div style="display:flex;align-items:stretch;gap:4px;padding:0 14px;border-bottom:1px solid var(--line)">
               ${[['tasks', '任务', tasks.length], ['bugs', 'Bug', openBugs], ['snippets', '代码备忘', snips.length]].map(([k, l, n]) => `
                 <button class="btn ghost sm" data-tab="${k}" style="border-radius:8px 8px 0 0;border-bottom:2px solid ${tab === k ? 'var(--accent)' : 'transparent'};color:${tab === k ? 'var(--ink)' : 'var(--ink-3)'};font-weight:${tab === k ? '650' : '400'};height:34px">
                   ${l}<span class="muted" style="font-weight:400">${n}</span>
                 </button>`).join('')}
+              <button class="btn primary sm" id="quickAdd" style="margin-left:auto;align-self:center;margin:6px 0;height:28px">
+                ${icon('plus', 13)} ${tab === 'tasks' ? '新增任务' : tab === 'bugs' ? '记一个 bug' : '新增备忘'}
+              </button>
             </div>
           </div>
           <div id="devBody">${tabBody(p, tasks, bugs, snips)}</div>
@@ -170,6 +173,12 @@
       tab = el.dataset.tab; WB.refresh();
     }));
     WB.qs('#editProj', wrap).addEventListener('click', () => editProject(p));
+
+    WB.qs('#quickAdd', wrap).addEventListener('click', () => {
+      if (tab === 'tasks') editTask(null, p.id, 'todo');
+      else if (tab === 'bugs') editBug(null, p.id);
+      else editSnip(null, p.id);
+    });
 
     const body = WB.qs('#devBody', wrap);
     body.addEventListener('click', e => {
